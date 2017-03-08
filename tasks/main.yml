@@ -10,16 +10,6 @@
   pip:
     name: psycopg2
 
-# First loop over sql_facts to gather variables from various databases for
-# want later use.
-- include: "{{query[0]['engine']}}_get_facts.yml"
-  # with_items: "{{sql_facts_queries|default(omit)}}"
-  with_subelements:
-     - "{{sql_facts_queries|default(omit)}}"
-     - sql_args
-  loop_control:
-    loop_var: query
-
 - name: loading sql sql_history from '{{sql_history_logfile}}'
   set_fact:
     sql_history: "{{lookup('file', sql_history_logfile)}}"
@@ -27,13 +17,10 @@
   # first run
   ignore_errors: True
 
-# Second loop to run arbitrary sql_query_jobs in a defined sequence
-# A query job does the following things
-# - debug: var=query
-- include: "{{query[0]['engine']}}_query_job.yml"
-  with_subelements:
-     - "{{sql_jobs|default(omit)}}"
-     - sql_args
-  when: "query[1]['query'] not in sql_history"
-  loop_control:
-    loop_var: query
+# iterate over a previously explicitely defined list of queries or sql scripts
+- include: sql_declarative_mode.yml
+  when: sql_jobs is defined or sql_con_args is defined
+
+# If role was given a sql_path argument, iterate over all files under that path.
+- include: sql_path_mode.yml
+  when: sql_path is defined
