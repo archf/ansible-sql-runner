@@ -1,3 +1,5 @@
+---
+
 # First loop over sql_facts to gather variables from various databases for
 # want later use.
 - include: "{{query[0]['engine']}}_get_facts.yml"
@@ -10,7 +12,6 @@
 
 # Second loop to run arbitrary sql_query_jobs in a defined sequence
 # A query job does the following things
-# - debug: var=query
 - include: "{{query[0]['engine']}}_query_job.yml"
   with_subelements:
      - "{{sql_jobs|default(omit)}}"

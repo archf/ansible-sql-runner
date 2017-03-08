@@ -1,9 +1,9 @@
 ---
 
-# run  mutable queries
-#
+# run mutable queries that will alter db state
 - include: postgres_run_query.yml
 
+# log job
 - name: log query result to sql '{{sql_history_logfile}}'
   lineinfile:
     create: yes

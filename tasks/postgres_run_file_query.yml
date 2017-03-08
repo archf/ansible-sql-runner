@@ -1,0 +1,31 @@
+---
+
+- debug: var=item
+
+# Run sql queries on postgres database an database and optionaly
+# register results for later use. This is the main entry point to the
+# postgresql_query module used by this role
+
+# Requirements:
+#   - postgresql_query ansible module
+#     - psycopg2
+
+# This task necessary because data structure is different
+
+- debug: var=sql_con_args
+
+- name: run postgres query from fileglob
+  postgresql_query:
+    user: "{{sql_con_args['user']}}"
+    password: "{{sql_con_args['password']}}"
+    db: "{{sql_db}}"
+    host: "{{sql_host|default(omit)}}"
+    query: "{{item}}"
+  delegate_to: localhost
+
+# log job
+- name: log query result to sql '{{sql_history_logfile}}'
+  lineinfile:
+    create: yes
+    line: "{{item}}"
+    dest: "{{sql_history_logfile}}"
