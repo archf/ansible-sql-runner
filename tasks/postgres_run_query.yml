@@ -1,0 +1,29 @@
+---
+
+# Run sql queries on postgres database an database and optionaly
+# register results for later use. This is the main entry point to the
+# postgresql_query module used by this role
+
+# Requirements:
+#   - postgresql_query ansible module
+#     - psycopg2
+
+# This task necessary because data structure is different
+# - debug: var=query
+
+# run queries
+- name: run postgres query | '{{query[1]['query']}}'
+  postgresql_query:
+    user: "{{sql_connection_args['postgres']['user']}}"
+    password: "{{sql_connection_args['postgres']['password']}}"
+    db: "{{sql_connection_args['postgres']['db']}}"
+    host: "{{sql_connection_args['postgres']['host']|default(omit)}}"
+    query: "{{query[1]['query']}}"
+    positional_args: "{{query[1]['positional_args']|default(omit)}}"
+    named_args: "{{query[1]['named_args']|default(omit)}}"
+    fact: "{{query['fact']|default(omit)}}"
+  delegate_to: localhost
+  register: query_results
+
+- include: debug_query_task.yml
+  when: db_upgrader_debug

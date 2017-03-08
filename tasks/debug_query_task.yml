@@ -1,0 +1,17 @@
+---
+
+# print debugging information to diagnose a query task.
+
+# - debug: msg="{{sql_connection_args['postgres']['db']}}"
+
+# all loops from main.yml should have a loop_var by the name of 'query'
+# - debug: var=hostvars
+
+# - debug: msg="{{item["engine"]}}_get_facts.yml"
+#   with_items: "{{sql_facts_queries|default(omit)}}"
+
+- name: debug task | previous query ran
+  debug: var=query
+
+# - name: debug task | previous query results (returned value)
+#   debug: var={{query['name']}}

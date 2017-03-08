@@ -1,0 +1,39 @@
+---
+
+- debug: var=hostvars[engine]
+- debug: var=engine
+# - debug: var=role_path
+# - debug: msg={{ 'srx_' ~  engine ~ '_ui_password'}}
+# - fail:
+
+- name: Install psycop2
+  pip:
+    name: psycopg2
+
+# First loop over sql_facts to gather variables from various databases for
+# want later use.
+- include: "{{query[0]['engine']}}_get_facts.yml"
+  # with_items: "{{sql_facts_queries|default(omit)}}"
+  with_subelements:
+     - "{{sql_facts_queries|default(omit)}}"
+     - sql_args
+  loop_control:
+    loop_var: query
+
+- name: loading sql sql_history from '{{sql_history_logfile}}'
+  set_fact:
+    sql_history: "{{lookup('file', sql_history_logfile)}}"
+  # ignore errors caused by inexisting file, this might be the case on the
+  # first run
+  ignore_errors: True
+
+# Second loop to run arbitrary sql_query_jobs in a defined sequence
+# A query job does the following things
+# - debug: var=query
+- include: "{{query[0]['engine']}}_query_job.yml"
+  with_subelements:
+     - "{{sql_jobs|default(omit)}}"
+     - sql_args
+  when: "query[1]['query'] not in sql_history"
+  loop_control:
+    loop_var: query

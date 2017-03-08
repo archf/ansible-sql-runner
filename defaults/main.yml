@@ -1,0 +1,19 @@
+---
+
+# Disable role debugging by default.
+db_upgrader_debug: True
+
+# Empty fact list that will be populated with results for later use as
+# named_args.
+sql_facts: {}
+
+# This file logs a list of sql queries that were performed. It allows
+# rerunning the playbook without the executing sql scripts that were already
+# done. Each line is either:
+# - An sql query
+# - the full path of an sql scripts.
+sql_history_logfile: "{{playbook_dir}}/tmp/sql_history.log"
+
+# sql_scripts_root_dir: <path to scripts folder>
+
+# sql_args

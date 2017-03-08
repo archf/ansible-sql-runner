@@ -1,0 +1,11 @@
+---
+
+# run  mutable queries
+#
+- include: postgres_run_query.yml
+
+- name: log query result to sql '{{sql_history_logfile}}'
+  lineinfile:
+    create: yes
+    line: "{{query[1]['query']}}"
+    dest: "{{sql_history_logfile}}"

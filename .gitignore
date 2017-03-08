@@ -1,0 +1,3 @@
+tests/scripts/test.yml
+tests/tmp/*
+*.ropeproject
