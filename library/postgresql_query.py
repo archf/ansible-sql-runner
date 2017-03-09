@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+ANSIBLE_METADATA = {'status': ['stableinterface'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
 DOCUMENTATION = '''
 ---
 module: postgresql_query
@@ -157,13 +160,45 @@ ansible_facts:
         }
 '''
 
+HAS_PSYCOPG2 = False
 try:
     import psycopg2
     import psycopg2.extras
 except ImportError:
-    postgresqldb_found = False
+    pass
 else:
-    postgresqldb_found = True
+    HAS_PSYCOPG2 = True
+
+import traceback
+
+
+# embedding content of lib/ansible/module/utils for ansible 2.2 while this
+# module is not upstream. Later on replace that class by:
+# import ansible.module_utils.postgres as pgutils
+
+class Postgres():
+    @staticmethod
+    def ensure_libs(sslrootcert=None):
+        if not HAS_PSYCOPG2:
+            raise LibraryError('psycopg2 is not installed. we need psycopg2.')
+        if sslrootcert and psycopg2.__version__ < '2.4.3':
+            raise LibraryError('psycopg2 must be at least 2.4.3 in order to use the ssl_rootcert parameter')
+
+        # no problems
+        return None
+
+    @staticmethod
+    def postgres_common_argument_spec():
+        return dict(
+            login_user        = dict(default='postgres'),
+            login_password    = dict(default='', no_log=True),
+            login_host        = dict(default=''),
+            login_unix_socket = dict(default=''),
+            port              = dict(type='int', default=5432),
+            ssl_mode          = dict(default='prefer', choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full']),
+            ssl_rootcert      = dict(default=None),
+        )
+pgutils = Postgres()
 
 from ansible.module_utils.six import iteritems
 from ansible.errors import AnsibleError
@@ -171,74 +206,73 @@ from ansible.errors import AnsibleError
 # ===========================================
 # PostgreSQL module specific support methods.
 #
+
+# todo: move query in here
+def run_query():
+    pass
+
+
 # ===========================================
 # Module execution.
+#
 
 def main():
+    argument_spec = pgutils.postgres_common_argument_spec()
+
+    argument_spec.update(dict(
+        db=dict(default=None),
+        query=dict(type="str"),
+        positional_args=dict(type="list"),
+        named_args=dict(type="dict"),
+        fact=dict(default=None),
+    ))
+
     module = AnsibleModule(
-        argument_spec=dict(
-            user=dict(default="postgres"),
-            password=dict(default=None),
-            host=dict(default=None),
-            sslmode={
-                "choices": [
-                    "disable",
-                    "allow",
-                    "prefer",
-                    "require",
-                    "verify-ca",
-                    "verify-full"]},
-            unix_socket=dict(default=None),
-            db=dict(default=None),
-            port=dict(default='5432'),
-            query=dict(type="str"),
-            positional_args=dict(type="list"),
-            named_args=dict(type="dict"),
-            fact=dict(default=None)
-        ),
+        argument_spec=argument_spec,
+        supports_check_mode=True,
         mutually_exclusive=[
             ["positional_args", "named_args"]
         ],
-        # only for readonly (select) commands
-        supports_check_mode=True
     )
 
-    db = module.params["db"]
-    if db == '':
-        module.fail_json(msg="a database must be specified")
-
-    if not postgresqldb_found:
+    if not HAS_PSYCOPG2:
         module.fail_json(msg="the python psycopg2 module is required")
+
+    changed = False
 
     # To use defaults values, keyword arguments must be absent, so
     # check which values are empty and don't include in the **kw
     # dictionary
     params_map = {
-        "host": "host",
-        "user": "user",
-        "password": "password",
-        "port": "port",
+        "login_host":"host",
+        "login_user":"user",
+        "login_password":"password",
+        "port":"port",
         "db": "database",
-        "sslmode": "sslmode"
+        "ssl_mode":"sslmode",
+        "ssl_rootcert":"sslrootcert"
     }
-
-    kw = dict((params_map[k], v) for (k, v) in iteritems(module.params)
-              if k in params_map and v != "")
+    kw = dict( (params_map[k], v) for (k, v) in iteritems(module.params)
+              if k in params_map and v != '' and v is not None)
 
     # If a login_unix_socket is specified, incorporate it here.
     is_localhost = "host" not in kw or kw["host"] == "" or kw["host"] == "localhost"
-    if is_localhost and module.params["unix_socket"] != "":
-        kw["host"] = module.params["lunix_socket"]
+
+    if is_localhost and module.params["login_unix_socket"] != "":
+        kw["host"] = module.params["login_unix_socket"]
+
+    # if db is None:
+    #     module.fail_json(msg="a database must be specified")
 
     try:
+        pgutils.ensure_libs(sslrootcert=module.params.get('ssl_rootcert'))
+        # module.exit_json(msg=kw)
         db_connection = psycopg2.connect(**kw)
         # Using RealDictCursor allows access to row results by real column name
         cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     except Exception:
         e = get_exception()
-        module.fail_json(msg="Unable to connect to database: %s" % e)
-
-    changed = False
+        module.fail_json(msg="unable to connect to database: {0}".format(str(e)), exception=traceback.format_exc())
 
     # if query is a file, load the file and run it
     query = module.params["query"]
