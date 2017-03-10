@@ -3,3 +3,4 @@
 # iterate over fileglob
 - include: "{{sql_engine}}_run_file_query.yml"
   with_fileglob: "{{sql_path|default(omit)}}"
+  when: "item not in sql_history"
