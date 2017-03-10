@@ -208,7 +208,7 @@ from ansible.errors import AnsibleError
 #
 
 # todo: move query in here
-def run_query():
+def run_query(cursor, ):
     pass
 
 
@@ -261,18 +261,20 @@ def main():
     if is_localhost and module.params["login_unix_socket"] != "":
         kw["host"] = module.params["login_unix_socket"]
 
-    # if db is None:
-    #     module.fail_json(msg="a database must be specified")
-
     try:
         pgutils.ensure_libs(sslrootcert=module.params.get('ssl_rootcert'))
-        # module.exit_json(msg=kw)
         db_connection = psycopg2.connect(**kw)
         # Using RealDictCursor allows access to row results by real column name
         cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     except Exception:
         e = get_exception()
         module.fail_json(msg="unable to connect to database: {0}".format(str(e)), exception=traceback.format_exc())
+
+    except TypeError:
+        e = get_exception()
+        if 'sslrootcert' in e.args[0]:
+            module.fail_json(msg='Postgresql server must be at least version 8.4 to support sslrootcert. Exception: {0}'.format(e), exception=traceback.format_exc())
+        module.fail_json(msg="unable to connect to database: %s" % e, exception=traceback.format_exc())
 
     # if query is a file, load the file and run it
     query = module.params["query"]
