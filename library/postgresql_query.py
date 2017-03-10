@@ -29,12 +29,13 @@ description:
      would benefit from bound parameters for SQL escaping.
    - Query results are returned as "query_results" as a list of dictionaries.
      Number of rows affected are returned as "row_count".
-   - Can read queries from a .sql file
+   - Can read queries from a .sql script files
+   - SQL scripts may be templated with ansible variables at execution time
 version_added: "2.3"
 options:
   db:
     description:
-      - name of database to connect to.
+      - name of the database to run queries against
     required: true
     default: null
   port:
@@ -42,34 +43,26 @@ options:
       - Database port to connect to.
     required: false
     default: 5432
-  user:
+  login_user:
     description:
       - User (role) used to authenticate with PostgreSQL
     required: false
     default: postgres
-  password:
+  login_password:
     description:
       - Password used to authenticate with PostgreSQL
     required: false
     default: null
-  host:
+  login_host:
     description:
       - Host running PostgreSQL.
     required: false
     default: localhost
-  unix_socket:
+  login_unix_socket:
     description:
       - Path to a Unix domain socket for local connections
     required: false
     default: null
-  sslmode:
-    description:
-      - SSL settings for the database connection.
-      - allowed values are "disable","allow","prefer","require",
-        "verify-ca","verify-full"
-      - See http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-    required: false
-    default: prefer
   query:
     description:
       - SQL query to run. Variables can be escaped with psycopg2 syntax.
@@ -84,6 +77,20 @@ options:
   fact: |
       Append the query_results to this key value, making this new variable
       available to subsequent plays during an ansible-playbook run.
+  ssl_mode:
+    description:
+      - Determines whether or with what priority a secure SSL TCP/IP connection will be negotiated with the server.
+      - See https://www.postgresql.org/docs/current/static/libpq-ssl.html for more information on the modes.
+      - Default of C(prefer) matches libpq default.
+    required: false
+    default: prefer
+    choices: [disable, allow, prefer, require, verify-ca, verify-full]
+    version_added: '2.3'
+  ssl_rootcert:
+    description:
+      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the file exists, the server's certificate will be verified to be signed by one of these authorities.
+    required: false
+    default: null
 notes:
    - The default authentication assumes that you are either logging in as or
      sudo'ing to the postgres account on the host.
@@ -93,6 +100,14 @@ notes:
      PostgreSQL must also be installed on the remote host. For Ubuntu-based
      systems, install the postgresql, libpq-dev, and python-psycopg2 packages
      on the remote host before using this module.
+   - If the passlib library is installed, then passwords that are encrypted
+     in the DB but not encrypted when passed as arguments can be checked for
+     changes. If the passlib library is not installed, unencrypted passwords
+     stored in the DB encrypted will be assumed to have changed.
+   - If you specify PUBLIC as the user, then the privilege changes will apply
+     to all users. You may not specify password or role_attr_flags when the
+     PUBLIC user is specified.
+   - The ssl_rootcert parameter requires at least Postgres version 8.4 and I(psycopg2) version 2.4.3.
 requirements: [ psycopg2 ]
 author: "Felix Archambault (@archf), Will Rouesnel (@wrouesnel)"
 '''
@@ -175,7 +190,6 @@ import traceback
 # embedding content of lib/ansible/module/utils for ansible 2.2 while this
 # module is not upstream. Later on replace that class by:
 # import ansible.module_utils.postgres as pgutils
-
 class Postgres():
     @staticmethod
     def ensure_libs(sslrootcert=None):
@@ -207,10 +221,8 @@ from ansible.errors import AnsibleError
 # PostgreSQL module specific support methods.
 #
 
-# todo: move query in here
-def run_query(cursor, ):
+def run_query(cursor):
     pass
-
 
 # ===========================================
 # Module execution.
@@ -315,17 +327,10 @@ def main():
 
         rowcount = len(query_results)
         fact = module.params["fact"]
-        ansible_facts = {fact: query_results}
-
-        # to populate a fact, query must return only one row
-        # if fact is not None and rowcount != 1:
-        #     module.fail_json(msg="Unable to assign result to fact '%s': query must return only one row"
-        #                      % fact,
-        #                      query_results=query_results,
-        #                      rowcount=rowcount)
-        # else:
-        #     ansible_facts = {fact : query_results[0]}
-
+        if fact is not None:
+            ansible_facts = {fact: query_results}
+        else:
+            ansible_facts = {}
     else:
         rowcount = 0
 
