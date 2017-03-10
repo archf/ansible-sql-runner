@@ -15,6 +15,7 @@
     query: "{{item}}"
     # named_args: "{{sql_facts|default(omit)}}"
   delegate_to: localhost
+  run_once: True
 
 # log job
 - name: log query result to sql '{{sql_history_logfile}}'

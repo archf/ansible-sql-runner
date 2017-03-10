@@ -33,6 +33,7 @@
 
     fact: "{{query['fact']|default(omit)}}"
   delegate_to: localhost
+  run_once: True
   register: query_results
 
 - include: debug_query_task.yml
