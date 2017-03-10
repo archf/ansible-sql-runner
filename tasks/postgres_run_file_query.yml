@@ -1,8 +1,8 @@
 ---
 
-# This task necessary because data structure is different
+# This task necessary because data structure is different when in fileglob mode
 
-- name: run postgres query fileglob iteration
+- name: run postgres file query (fileglob iteration)
   postgresql_query:
     login_host: "{{sql_host|default(omit)}}"
     login_user: "{{sql_con_args['user']}}"
