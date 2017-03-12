@@ -1,8 +1,5 @@
 ---
 
-# This task necessary because data structure is different
-# - debug: var=query
-
 - include: postgres_run_query.yml
 
 - include: debug_query_task.yml

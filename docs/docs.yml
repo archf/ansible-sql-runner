@@ -1,0 +1,207 @@
+
+---
+
+github_account: archf
+requirements: |
+  It depends on the SQL engine you use. Here's the list of supported SQL engines
+  and their requirements.
+
+    * postgresql requires [psycopg2](http://initd.org/psycopg/)
+    * impala requires [impyla](https://github.com/cloudera/impyla)
+
+description: |
+  There are two ways you can use this role.
+
+  **The filepath mode or fileglob mode**
+
+  In this mode, your iterate over a fileglob pattern you pass as argument to
+  the role. See [ansible documentation](http://docs.ansible.com/ansible/playbooks_loops.html#id4)
+  for more information on fileglob pattern.
+
+    * Your fileglob must match only `.sql` files or role will fail.
+    * Your fileglob must target a single sql engine per role invocation.
+    * Cororally of second point above, you mus
+
+  **The declarative mode or advanced mode**
+
+  In this mode, you iterate over queries as defined in a precise input data
+  structure. This enables more capabilities. See below.
+
+  On complex setups, this allows your to run batch of queries while
+  alternating sql engine. For instance, you can
+    1. run scripts on postgres
+    2. switch to impala
+    3. than go back to postgres
+    4. than you switch to phoenix
+    5. ...
+
+    all without ever leaving the role.
+
+  Role invoked this way can perform one of both following tasks or loop.
+    1. The first loop can lookup data on databases and can append results to
+      * a variable in the `ansible_facts`
+      * to a key you specify inside a special `dict` named `sql_facts`
+    2. The second loop can perform various queries that can be templated
+      * using entries in the `sql_facts` hash populated in the first loop
+      * using other data available in the ansible runtime namespace
+
+  During a single role invocation, your credentials (user//password) will
+  be fetched from a dictionary that must be structure on a per `sql_engine` basis.
+
+  ### Playbook examples
+
+  Given those defined variables.
+
+  ```yaml
+  # putting the user/team at the second level level allows to naturally pass
+  # the role a data structure with everything needed to access the different
+  # engines for a complex maintenance activity when inpersonating a specific
+  # a specific individual/group. It also allows to have even less levels.
+
+  app_sql_conn_creds:
+    # per user/team then engine creds
+    me:
+      postgres:
+        user: myuser
+        password: 'userpassword'
+
+    thisotherteam:
+      postgres:
+        user: teamname
+        password: "teampassword"
+
+  app_sql_conn_creds:
+      postgres:
+        user: myuser
+        password: 'userpassword'
+      impala:
+        user: teamname
+        password: "teampassword"
+
+  app_sql_conn_targets:
+    # contains ansible's postgresql_query module's arguments defining the
+    # target
+    postgres:
+      host: <hostname or ip>
+      port: <optional value (defaults to 5432 when using postgresql_query module)>
+      ssl_mode: <optional value, defaults to 'prefer' for postgresql modules>
+      ssl_rootcert: <optional value>
+      unix_socket: <optional value>
+
+    impala:
+      host: <hostname or ip>
+      user: <impala user>
+      db: dbname
+
+  # `sql_db` is a loose variable and is no tied to the engine because
+  #   1. A target might have multiple databases.
+  #   2. It may not exist and role objective would be to create it. This is
+  #       makes it easier to be consistent with other role coded with that
+  #       purpose in mind.
+  #   3. Has to be passed directly when using the fileglob mode
+  sql_db: dbname
+
+  # `sql_engine` is not tied to the target because:
+  # 1. A target may host multiple databases (in dev environnements)
+  # 2. Different team might need to interact with different db
+  ```
+
+  Input data structures depends of the way you use the role. In any cases either
+  you let it reach for ansible globally defined variables or you pass then
+  explicitly feeding it what it expects.
+
+  **Fileglob mode example**
+
+  For that mode since you can interact with only one target//db, things are
+  much more specific.
+
+  ```yaml
+    - hosts: localhost
+
+    - { role: sql-runner,
+        sql_conn_target: "{{app_sql_conn_target['postgres']}}",
+        sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
+        sql_engine: postgres,
+        sql_db: 'mydb',
+        sql_fileglob: "{{playbook_dir}}/scripts/postgres_query_test/*"
+        }
+  ```
+
+  **Advanced mode example**
+
+    ```yaml
+    - hosts: localhost
+
+    - { role: sql-runner,
+        sql_conn_targets: "{{app_sql_conn_target}}",
+        sql_conn_creds: "{{app_sql_conn_creds['me']}}",
+        sql_queries: "{{app_sql_advanced_tasks}"
+        }
+  ```
+
+  Where `my_sql_advanced_tasks` is defined as below. See inlined explanations.
+
+  ```yaml
+  app_sql_advanced_tasks:
+
+      # Fist loop that optionaly gather facts that can be used to alter later
+      # scripts that contains named placeholder. Those should be mainly 'read'
+      # queries that do not alter the database state.
+      sql_var_queries:
+
+          # engine will default the the one in sql_conn_target if unspecified.
+          # In that case
+        - engine: postgres
+          db: mydb
+          # List of queries to run
+          queries:
+            - name: my_var
+              query: "SELECT this_var FROM that_table limit %s"
+              positional_args:
+                - 1
+
+            # run query from a file where path is relative to playbook dir
+            - name: other_var
+              db: <override 'mydb' value for this query>
+              query: "{{playbook_dir}}/scripts/postgres/test_postgres_query_return_facts.sql"
+              named_args:
+                nb_results: 6
+
+        - engine: impala
+          queries:
+          - name: impala_var
+            query: <sql query to gather to assign impala_var value>
+
+        # This will populate a `sql_facts` dict globally available for the rest of the
+        # ansible runtime. You can pass that dict as a named_args to `postgresql_query`
+        # or `impala_query` module.
+
+        # ex:
+        # "sql_facts":
+        #   {
+        #     "my_var": "my_value",
+        #     "other_var": "other_value"
+        #     "impala_var": impala_value
+        #   }
+        # ```
+
+      # List of queries that each contains a list of script to execute against an
+      # sql engine perform. If scripts suffix is .sql.j2, it will be templated
+      # locally first. All scripts are run in the defined order.
+      # adm is a memotechnic shorthand for (admin|administration|maintenance) queries
+      sql_adm_queries:
+        - engine: postgres
+          queries:
+            - query: "{{playbook_dir}}/scripts/postgres/test_postgres_query_use_facts.sql"
+              named_args: "{{sql_facts}}"
+
+        - engine: impala
+          queries:
+            - query: a second query
+    ```
+
+todos:
+  - add hbase support
+  - add phoenix support
+  - impala templating support
+  - test ansible timeout behavior when logging long query

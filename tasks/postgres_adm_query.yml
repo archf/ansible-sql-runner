@@ -1,6 +1,5 @@
 ---
 
-# run mutable queries that will alter db state
 - include: postgres_run_query.yml
 
 # log job

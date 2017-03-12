@@ -4,13 +4,15 @@
 
 - name: run postgres file query (fileglob iteration)
   postgresql_query:
-    login_host: "{{sql_host|default(omit)}}"
-    login_user: "{{sql_con_args['user']}}"
-    login_password: "{{sql_con_args['password']}}"
-    login_unix_socket: "{{sql_con_args['socket']|default(omit)}}"
-    ssl_mode: "{{sql_con_args['ssl_mode']|default(omit)}}"
-    ssl_rootcert: "{{sql_con_args['ssl_rootcert']|default(omit)}}"
-
+    # creds
+    login_user: "{{sql_conn_creds['user']}}"
+    login_password: "{{sql_conn_creds['password']}}"
+    # target
+    login_host: "{{sql_conn_target['host']|default(omit)}}"
+    login_unix_socket: "{{sql_conn_target['unix_socket']|default(omit)}}"
+    ssl_mode: "{{sql_conn_target['ssl_mode']|default(omit)}}"
+    ssl_rootcert: "{{sql_conn_target['ssl_rootcert']|default(omit)}}"
+    # query
     db: "{{sql_db}}"
     query: "{{item}}"
     # named_args: "{{sql_facts|default(omit)}}"

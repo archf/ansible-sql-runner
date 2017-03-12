@@ -1,6 +1,6 @@
 ---
 
-# iterate over fileglob
-- include: "{{sql_engine}}_run_file_query.yml"
-  with_fileglob: "{{sql_path|default(omit)}}"
+# iterate over fileglob while picking the right sql engine
+- include: "{{sql_engine}}_run_sql_script.yml"
+  with_fileglob: "{{sql_fileglob|default(omit)}}"
   when: "item not in sql_history"

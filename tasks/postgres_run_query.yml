@@ -1,36 +1,34 @@
 ---
 
-# Run sql queries on postgres database an database and optionaly
-# register results for later use. This is the main entry point to the
-# postgresql_query module used by this role
+# Run sql query on postgres database and optionaly register results for later
+# use.
+#
+# This is included by:
+#   - postgresql_var_query
+#   - postgresql_adm_query
 
-# Requirements:
-#   - postgresql_query ansible module
-#     - psycopg2
+# todo: move this elsewhere
+- name: Install psycop2
+  pip:
+    name: psycopg2
 
-# This task necessary because data structure is different
-# - debug: var=query
-
-# adjust sql_con_args before query. This is sql engine dependant. This allows
-# args to be passed as role arguments
-# - set_fact:
-#     sql_con: "{{sql_con_args[query[0]['engine'][team]}}"
-
-# run queries
 - name: run postgres query | "{{query[1]['query']}}"
   postgresql_query:
-    login_host: "{{sql_con_args['postgres']['host']|default(omit)}}"
-    login_user: "{{sql_con_args['postgres']['user']}}"
-    login_password: "{{sql_con_args['postgres']['password']}}"
-    login_unix_socket: "{{sql_con_args['postgres']['socket']|default(omit)}}"
-    ssl_mode: "{{sql_con_args['postgres']['ssl_mode']|default(omit)}}"
-    ssl_rootcert: "{{sql_con_args['postgres']['ssl_rootcert']|default(omit)}}"
-
-    db: "{{sql_con_args['postgres']['db']}}"
+    # creds
+    login_user: "{{sql_conn_creds['postgres']['user']}}"
+    login_password: "{{sql_conn_creds['postgres']['password']}}"
+    # target
+    login_host: "{{sql_conn_target['postgres']['host']|default(omit)}}"
+    login_unix_socket: "{{sql_conn_target_args['postgres']['unix_socket']|default(omit)}}"
+    ssl_mode: "{{sql_conn_target['postgres']['ssl_mode']|default(omit)}}"
+    ssl_rootcert: "{{sql_conn_target['postgres']['ssl_rootcert']|default(omit)}}"
+    # query
+    db: "{{query[1]['db']|default(query[0]['db'])}}"
     query: "{{query[1]['query']}}"
     positional_args: "{{query[1]['positional_args']|default(omit)}}"
     named_args: "{{query[1]['named_args']|default(omit)}}"
 
+    # optionaly optionaly turn result into a fact//variable
     fact: "{{query['fact']|default(omit)}}"
   delegate_to: localhost
   run_once: True

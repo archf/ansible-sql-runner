@@ -1,15 +1,15 @@
 ---
 
 # Example task file to combine results of multiple queries under a given
-# ansible_fact, this is useful if your only option is to uses the command
-# module to run a sql
+# ansible_fact
 #
 # - name: run sql command
 #     command: psql -U <user> -d <db> -c "<command>"
 #   register: query_results
 
-# Adjust the content of rows to your liking. Idealy you would run this after a
-# query that returns a single key = value
+# Idealy you would run this after a query that returns a single row.
+# ex:
+# query_results = [ { key = value} ]
 - name: append "{{query[1]['name']}}" variable to sql_fact dict
   set_fact:
     sql_facts: "{{sql_facts|combine({query[1]['name']: query_results.query_results[0].values()|list|first}, recursive=True)}}"
@@ -17,15 +17,3 @@
 - name: debug task | sql_facts
   debug: var=sql_facts
   when: db_upgrader_debug
-# This will populate a `sql_facts` dict globally available for the rest of the
-# ansible runtime. You can pass that dict as a named_args to `postgresql_query`
-# or `impala_query` module.
-
-# ex from :
-# ```
-# "sql_facts":
-#   {
-#     "my_var": "my_value",
-#     "other_var": "other_value"
-#   }
-# ```
