@@ -58,7 +58,7 @@ description: |
   # engines for a complex maintenance activity when inpersonating a specific
   # a specific individual/group. It also allows to have even less levels.
 
-  # 3 level example
+  # 3 levels example, you
   app_sql_conn_creds:
     # per user/team then engine creds
     me:
@@ -71,7 +71,7 @@ description: |
         user: teamname
         password: "teampassword"
 
-  # 2 level example
+  # 2 levels example
   app_sql_conn_creds:
       postgres:
         user: myuser
@@ -89,6 +89,7 @@ description: |
       ssl_mode: <optional value, defaults to 'prefer' for postgresql modules>
       ssl_rootcert: <optional value>
       unix_socket: <optional value>
+      engine: postgres
 
     impala:
       host: <hostname or ip>
@@ -102,10 +103,6 @@ description: |
   #       purpose in mind.
   #   3. Has to be passed directly when using the fileglob mode
   sql_db: dbname
-
-  # `sql_engine` is not tied to the target because:
-  # 1. A target may host multiple databases (in dev environnements)
-  # 2. Different team might need to interact with different db
   ```
 
   Input data structures depends of the way you use the role. In any cases either
@@ -123,7 +120,6 @@ description: |
     - { role: sql-runner,
         sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
         sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
-        sql_engine: postgres,
         sql_db: 'mydb',
         sql_fileglob: "{{playbook_dir}}/scripts/postgres_query_test/*"
         }
@@ -135,7 +131,7 @@ description: |
     - hosts: localhost
 
     - { role: sql-runner,
-        sql_conn_targets: "{{app_sql_conn_target}}",
+        sql_conn_targets: "{{app_sql_conn_targets}}",
         sql_conn_creds: "{{app_sql_conn_creds['me']}}",
         sql_queries: "{{app_sql_advanced_tasks}"
         }
