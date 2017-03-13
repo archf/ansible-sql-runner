@@ -18,10 +18,10 @@
     login_user: "{{sql_conn_creds['postgres']['user']}}"
     login_password: "{{sql_conn_creds['postgres']['password']}}"
     # target
-    login_host: "{{sql_conn_target['postgres']['host']|default(omit)}}"
+    login_host: "{{sql_conn_targets['postgres']['host']|default(omit)}}"
     login_unix_socket: "{{sql_conn_target_args['postgres']['unix_socket']|default(omit)}}"
-    ssl_mode: "{{sql_conn_target['postgres']['ssl_mode']|default(omit)}}"
-    ssl_rootcert: "{{sql_conn_target['postgres']['ssl_rootcert']|default(omit)}}"
+    ssl_mode: "{{sql_conn_targets['postgres']['ssl_mode']|default(omit)}}"
+    ssl_rootcert: "{{sql_conn_targets['postgres']['ssl_rootcert']|default(omit)}}"
     # query
     db: "{{query[1]['db']|default(query[0]['db'])}}"
     query: "{{query[1]['query']}}"

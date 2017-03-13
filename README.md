@@ -66,6 +66,7 @@ Given those defined variables.
 # engines for a complex maintenance activity when inpersonating a specific
 # a specific individual/group. It also allows to have even less levels.
 
+# 3 level example
 app_sql_conn_creds:
   # per user/team then engine creds
   me:
@@ -78,6 +79,7 @@ app_sql_conn_creds:
       user: teamname
       password: "teampassword"
 
+# 2 level example
 app_sql_conn_creds:
     postgres:
       user: myuser
@@ -127,7 +129,7 @@ much more specific.
   - hosts: localhost
 
   - { role: sql-runner,
-      sql_conn_target: "{{app_sql_conn_target['postgres']}}",
+      sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
       sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
       sql_engine: postgres,
       sql_db: 'mydb',
