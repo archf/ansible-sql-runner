@@ -292,7 +292,7 @@ def main():
     query = module.params["query"]
     if query.endswith('.sql'):
         try:
-            query = open(query, 'r', encoding="utf8").read().strip('\n')
+            query = open(query, 'r').read().strip('\n')
             # module.fail_json(msg="query :'%s'" % query)
         except Exception:
             e = get_exception()
