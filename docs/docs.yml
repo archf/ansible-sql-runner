@@ -106,8 +106,8 @@ description: |
   ```
 
   Input data structures depends of the way you use the role. In any cases either
-  you let it reach for ansible globally defined variables or you pass then
-  explicitly feeding it what it expects.
+  you let it reach for ansible globally defined variables or you pass it
+  explicitly what it expects.
 
   **Fileglob mode example**
 
