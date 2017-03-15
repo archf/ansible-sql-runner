@@ -1,0 +1,26 @@
+
+# This task necessary because data structure is different when in fileglob mode
+
+# Requirements:
+#   - impyla
+
+- name: run impala query | "{{query[1]['query']}}"
+  impala_query:
+    # creds
+    login_user: "{{sql_conn_creds['impala']['user']}}"
+    login_password: "{{sql_conn_creds['impala']['password']}}"
+    # target
+    login_host: "{{sql_conn_targets['impala']['host']|default(omit)}}"
+    login_unix_socket: "{{sql_conn_target_args['impala']['unix_socket']|default(omit)}}"
+    ssl_mode: "{{sql_conn_targets['impala']['ssl_mode']|default(omit)}}"
+    ssl_rootcert: "{{sql_conn_targets['impala']['ssl_rootcert']|default(omit)}}"
+    # query
+    db: "{{query[1]['db']|default(query[0]['db'])}}"
+    query: "{{query[1]['query']}}"
+    positional_args: "{{query[1]['positional_args']|default(omit)}}"
+    named_args: "{{query[1]['named_args']|default(omit)}}"
+
+    # optionaly optionaly turn result into a fact//variable
+    fact: "{{query['fact']|default(omit)}}"
+  delegate_to: localhost
+  run_once: True

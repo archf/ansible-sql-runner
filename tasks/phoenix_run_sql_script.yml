@@ -1,6 +1,6 @@
 ---
 
-# Run sql script on phoenix database an database and optionaly
+# Run sql script phoenix
 
 # Requirements:
   #- /usr/lib/phoenix/bin/sqlline.py present on the system
@@ -8,9 +8,4 @@
 - name: run phoenix query from fileglob
   shell: "/usr/lib/phoenix/bin/sqlline.py {{sql_conn_targets['host']}}:{{sql_conn_targets['port']}} {{item}}"
 
-# log job
-- name: log query result to sql '{{sql_history_logfile}}'
-  lineinfile:
-    create: yes
-    line: "{{item}}"
-    dest: "{{sql_history_logfile}}"
+- include: log_query_to_sql_hist.yml

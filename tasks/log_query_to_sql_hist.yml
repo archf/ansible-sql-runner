@@ -1,0 +1,10 @@
+---
+
+# log what's done. This makes a rerun possible.
+# Included by all *_run_sql_script.yml files
+
+- name: log query result to sql '{{sql_history_logfile}}'
+  lineinfile:
+    create: yes
+    line: "{{item}}"
+    dest: "{{sql_history_logfile}}"

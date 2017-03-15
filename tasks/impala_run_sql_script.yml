@@ -1,8 +1,6 @@
 ---
 
-# Run sql queries on impala database an database and optionaly
-# register results for later use. This is the main entry point to the
-# impala_query module used by this role
+# This task necessary because data structure is different when in fileglob mode
 
 # Requirements:
 #   - impyla
@@ -23,9 +21,4 @@
   delegate_to: localhost
   run_once: True
 
-# log job
-- name: log query result to sql '{{sql_history_logfile}}'
-  lineinfile:
-    create: yes
-    line: "{{item}}"
-    dest: "{{sql_history_logfile}}"
+- include: log_query_to_sql_hist.yml

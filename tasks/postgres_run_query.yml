@@ -22,12 +22,10 @@
     query: "{{query[1]['query']}}"
     positional_args: "{{query[1]['positional_args']|default(omit)}}"
     named_args: "{{query[1]['named_args']|default(omit)}}"
+    autocommit: "{{sql_conn_targets['autocommit']|default(omit)}}"
 
     # optionaly optionaly turn result into a fact//variable
     fact: "{{query['fact']|default(omit)}}"
   delegate_to: localhost
   run_once: True
   register: query_results
-
-- include: debug_query_task.yml
-  when: db_upgrader_debug

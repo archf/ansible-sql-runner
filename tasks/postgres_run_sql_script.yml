@@ -2,6 +2,9 @@
 
 # This task necessary because data structure is different when in fileglob mode
 
+# Requirements:
+#   - psycopg2
+
 - name: run postgres file query (fileglob iteration)
   postgresql_query:
     # creds
@@ -15,13 +18,8 @@
     # query
     db: "{{sql_db}}"
     query: "{{item}}"
-    # named_args: "{{sql_facts|default(omit)}}"
+    autocommit: "{{sql_conn_targets['autocommit']|default(omit)}}"
   delegate_to: localhost
   run_once: True
 
-# log job
-- name: log query result to sql '{{sql_history_logfile}}'
-  lineinfile:
-    create: yes
-    line: "{{item}}"
-    dest: "{{sql_history_logfile}}"
+- include: log_query_to_sql_hist.yml
