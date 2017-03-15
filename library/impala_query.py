@@ -16,21 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
-ANSIBLE_METADATA = {'status': ['stableinterface'],
-                    'supported_by': 'community',
-                    'version': '1.0'}
 DOCUMENTATION = '''
 ---
-module: postgresql_query
-short_description: Run arbitrary queries on a postgresql database.
+module: impala_query
+short_description: Run arbitrary queries on a impala database.
 description:
-   - Run arbitrary queries on postgresql instances from the current host.
+   - Run arbitrary queries on impala instances from the current host.
    - The function of this module is primarily to allow running queries which
      would benefit from bound parameters for SQL escaping.
    - Query results are returned as "query_results" as a list of dictionaries.
      Number of rows affected are returned as "row_count".
-   - Can read queries from a .sql script files
-   - SQL scripts may be templated with ansible variables at execution time
+   - Can read queries from a .sql file
 version_added: "2.3"
 options:
   db:
@@ -45,38 +41,23 @@ options:
     default: 5432
   login_user:
     description:
-      - User (role) used to authenticate with PostgreSQL
+      - User (role) used to authenticate with Impala
     required: false
     default: postgres
   login_password:
     description:
-      - Password used to authenticate with PostgreSQL
+      - Password used to authenticate with Impala
     required: false
     default: null
   login_host:
     description:
-      - Host running PostgreSQL.
+      - Host running Impala.
     required: false
     default: localhost
-  login_unix_socket:
-    description:
-      - Path to a Unix domain socket for local connections
-    required: false
-    default: null
-  query:
-    description:
-      - SQL query to run. Variables can be escaped with psycopg2 syntax.
   positional_args:
     description:
       - A list of values to be passed as positional arguments to the query.
       - Cannot be used with named_args
-  autocommit:
-      description:
-        - Enable transaction autocommit
-        - If enabled, This WILL run the query in check_mode
-      required: false
-      default: false
-      choices: [true, false]
   named_args:
     description:
       - A dictionary of key-value arguments to pass to the query.
@@ -84,44 +65,22 @@ options:
   fact: |
       Append the query_results to this key value, making this new variable
       available to subsequent plays during an ansible-playbook run.
-  ssl_mode:
-    description:
-      - Determines whether or with what priority a secure SSL TCP/IP connection will be negotiated with the server.
-      - See https://www.postgresql.org/docs/current/static/libpq-ssl.html for more information on the modes.
-      - Default of C(prefer) matches libpq default.
-    required: false
-    default: prefer
-    choices: [disable, allow, prefer, require, verify-ca, verify-full]
-    version_added: '2.3'
-  ssl_rootcert:
-    description:
-      - Specifies the name of a file containing SSL certificate authority (CA) certificate(s). If the file exists, the server's certificate will be verified to be signed by one of these authorities.
-    required: false
-    default: null
 notes:
    - The default authentication assumes that you are either logging in as or
      sudo'ing to the postgres account on the host.
-   - This module uses psycopg2, a Python PostgreSQL database adapter. You must
-     ensure that psycopg2 is installed on the host before using this module. If
-     the remote host is the PostgreSQL server (which is the default case), then
-     PostgreSQL must also be installed on the remote host. For Ubuntu-based
-     systems, install the postgresql, libpq-dev, and python-psycopg2 packages
+   - This module uses impyla, a Python impala database adapter. You must
+     ensure that impyla is installed on the host before using this module. If
+     the remote host is the impala server (which is the default case), then
+     impala must also be installed on the remote host. For Ubuntu-based
+     systems, install the impala, libpq-dev, and python-impyla packages
      on the remote host before using this module.
-   - If the passlib library is installed, then passwords that are encrypted
-     in the DB but not encrypted when passed as arguments can be checked for
-     changes. If the passlib library is not installed, unencrypted passwords
-     stored in the DB encrypted will be assumed to have changed.
-   - If you specify PUBLIC as the user, then the privilege changes will apply
-     to all users. You may not specify password or role_attr_flags when the
-     PUBLIC user is specified.
-   - The ssl_rootcert parameter requires at least Postgres version 8.4 and I(psycopg2) version 2.4.3.
-requirements: [ psycopg2 ]
-author: "Felix Archambault (@archf)"
+requirements: [ impyla ]
+author: "Felix Archambault (@archf)
 '''
 
 EXAMPLES = '''
 # Insert or update a record in a table with positional arguments
-- postgresql_query:
+- impala_query:
     db: acme
     user: django
     password: ceec4eif7ya
@@ -131,7 +90,7 @@ EXAMPLES = '''
     - "positional string value 2"
 
 # Insert or update a record in a table with named arguments
-- postgresql_query:
+- impala_query:
     db: acme
     user: django
     password: ceec4eif7ya
@@ -142,7 +101,7 @@ EXAMPLES = '''
 
 
 # Run queries from a '.sql' file
-- postgresql_query:
+- impala_query:
     db: acme
     user: django
     password: ceec4eif7ya
@@ -153,7 +112,7 @@ EXAMPLES = '''
 
 # Run queries from a '.sql' file and assign result in a fact available at
 # for the rest of the ansible runtime.
-- postgresql_query:
+- impala_query:
     db: acme
     user: django
     password: ceec4eif7ya
@@ -182,66 +141,52 @@ ansible_facts:
         }
 '''
 
-HAS_PSYCOPG2 = False
+HAS_IMPYLA = False
 try:
-    import psycopg2
-    import psycopg2.extras
+    from impala.dbapi import connect
 except ImportError:
     pass
 else:
-    HAS_PSYCOPG2 = True
+    HAS_IMPYLA = True
 
 import traceback
 
-
-# embedding content of lib/ansible/module/utils for ansible 2.2 while this
-# module is not upstream. Later on replace that class by:
-# import ansible.module_utils.postgres as pgutils
-class Postgres():
+class Impala():
     @staticmethod
     def ensure_libs(sslrootcert=None):
-        if not HAS_PSYCOPG2:
-            raise LibraryError('psycopg2 is not installed. we need psycopg2.')
-        if sslrootcert and psycopg2.__version__ < '2.4.3':
-            raise LibraryError('psycopg2 must be at least 2.4.3 in order to use the ssl_rootcert parameter')
+        if not HAS_IMPYLA:
+            raise LibraryError('impyla is not installed. we need impyla.')
 
         # no problems
         return None
 
     @staticmethod
-    def postgres_common_argument_spec():
+    def impala_common_argument_spec():
         return dict(
-            login_user        = dict(default='postgres'),
+            login_user        = dict(default='impala'),
             login_password    = dict(default='', no_log=True),
             login_host        = dict(default=''),
             login_unix_socket = dict(default=''),
-            port              = dict(type='int', default=5432),
-            ssl_mode          = dict(default='prefer', choices=['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full']),
-            ssl_rootcert      = dict(default=None),
+            port              = dict(type='int', default=21050)
         )
-pgutils = Postgres()
+impalautils = Impala()
 
 from ansible.module_utils.six import iteritems
 from ansible.errors import AnsibleError
 
 # ===========================================
-# PostgreSQL module specific support methods.
+# Impala module specific support methods.
 #
-
-def run_query(cursor):
-    pass
-
 # ===========================================
 # Module execution.
-#
 
 def main():
-    argument_spec = pgutils.postgres_common_argument_spec()
+
+    argument_spec = impalautils.impala_common_argument_spec()
 
     argument_spec.update(dict(
         db=dict(default=None),
         query=dict(type="str"),
-        autocommit=dict(type='bool', default=False, choices=BOOLEANS),
         positional_args=dict(type="list"),
         named_args=dict(type="dict"),
         fact=dict(default=None),
@@ -255,10 +200,8 @@ def main():
         ],
     )
 
-    if not HAS_PSYCOPG2:
-        module.fail_json(msg="the python psycopg2 module is required")
-
-    changed = False
+    if not HAS_IMPYLA:
+        module.fail_json(msg="the python impyla module is required")
 
     # To use defaults values, keyword arguments must be absent, so
     # check which values are empty and don't include in the **kw
@@ -268,41 +211,22 @@ def main():
         "login_user":"user",
         "login_password":"password",
         "port":"port",
-        "db": "database",
-        "ssl_mode":"sslmode",
-        "ssl_rootcert":"sslrootcert"
+        "db": "database"
     }
-    kw = dict( (params_map[k], v) for (k, v) in iteritems(module.params)
-              if k in params_map and v != '' and v is not None)
+    kw = dict((params_map[k], v) for (k, v) in iteritems(module.params)
+              if k in params_map and v != "")
 
-    # If a login_unix_socket is specified, incorporate it here.
     is_localhost = "host" not in kw or kw["host"] == "" or kw["host"] == "localhost"
 
     if is_localhost and module.params["login_unix_socket"] != "":
         kw["host"] = module.params["login_unix_socket"]
 
     try:
-        pgutils.ensure_libs(sslrootcert=module.params.get('ssl_rootcert'))
-        db_connection = psycopg2.connect(**kw)
-
-        # Enable autocommit on demand only so we can create databases
-        if module.params['autocommit']:
-            if psycopg2.__version__ >= '2.4.2':
-                db_connection.autocommit = True
-            else:
-                db_connection.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-
-        # Using RealDictCursor allows access to row results by real column name
-        cursor = db_connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        db_connection = connect(**kw)
+        cursor = db_connection.cursor(user=kw['user'])
     except Exception:
         e = get_exception()
-        module.fail_json(msg="unable to connect to database: {0}".format(str(e)), exception=traceback.format_exc())
-
-    except TypeError:
-        e = get_exception()
-        if 'sslrootcert' in e.args[0]:
-            module.fail_json(msg='Postgresql server must be at least version 8.4 to support sslrootcert. Exception: {0}'.format(e), exception=traceback.format_exc())
-        module.fail_json(msg="unable to connect to database: %s" % e, exception=traceback.format_exc())
+        module.fail_json(msg="Unable to connect to database: {0}".format(str(e)), exception=traceback.format_exc())
 
     # if query is a file, load the file and run it
     query = module.params["query"]
@@ -311,7 +235,7 @@ def main():
             query = open(query, 'r').read().strip('\n')
         except Exception:
             e = get_exception()
-            module.fail_json(msg="Unable to find '%s' in given path." % query)
+            module.fail_json(msg="Unable to find '%s' in given path: %s" % (query, e))
 
     arguments = None
 
@@ -326,7 +250,7 @@ def main():
         cursor.execute(query, arguments)
     except Exception:
         e = get_exception()
-        module.fail_json(msg="Unable to execute query: %s" % e,
+        module.fail_json(msg="Unable to execute query '%s': %s" % (query, e),
                          query_arguments=arguments)
 
     ansible_facts = {}
@@ -336,32 +260,26 @@ def main():
         # the SQL, so we act consistent and return the empty set when there's
         # nothing to return.
         try:
-            query_results = cursor.fetchall()
-        except psycopg2.ProgrammingError:
+            query_results = [
+                    {name: row[idx] for idx, name in enumerate(cursor.description)}
+                    for row in cursor.fetchall()]
+        except impala.error.ProgrammingError:
             pass
 
         rowcount = len(query_results)
         fact = module.params["fact"]
         if fact is not None:
             ansible_facts = {fact: query_results}
+        else:
+            ansible_facts = {}
     else:
         rowcount = 0
 
-    statusmessage = cursor.statusmessage
+    statusmessage = cursor.status()
 
-    # todo: naive check, look for the lack of 'altering/writing' commands
-    # set changed flag only on non read-only command
-    if "SELECT" in statusmessage:
-        changed = False
-    else:
-        changed = True
-
-    if changed:
-        if module.check_mode:
-            db_connection.rollback()
-        else:
-            db_connection.commit()
-
+    # there's no easy way to check for this on impala
+    changed = True
+    db_connection.commit()
     db_connection.close()
 
     module.exit_json(changed=changed, stout_lines=statusmessage,

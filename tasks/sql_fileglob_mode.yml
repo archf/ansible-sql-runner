@@ -1,6 +1,50 @@
 ---
 
-# iterate over fileglob while picking the right sql engine
+- name: register sql scripts requiring jinja templating
+  find:
+    paths: "{{sql_scripts_dir}}"
+    patterns: "*.j2"
+    recurse: yes
+  register: template_files
+
+# apply necessary interpolations
+- name: locally template sql scripts
+  template:
+    src: "{{item}}"
+    dest: "{{item}}.sql"
+    owner: root
+    group: root
+    mode: 0755
+  with_items: "{{template_files['files']|map(attribute='path')|sort}}"
+  delegate_to: localhost
+  run_once: True
+
+# register resulting sql files
+- name: register recursively list of sql files to run
+  find:
+    paths: "{{sql_scripts_dir}}"
+    patterns: "*.sql"
+    recurse: yes
+  register: sql_files
+
+# execute sql files
 - include: "{{sql_conn_targets['engine']}}_run_sql_script.yml"
-  with_fileglob: "{{sql_fileglob|default(omit)}}"
+  with_items: "{{sql_files['files']|map(attribute='path')|sort}}"
   when: "item not in sql_history"
+
+# on failure of above task, all templated will be available locally for
+# analysis
+- name: register locally templated sql scripts
+  find:
+    paths: "{{sql_scripts_dir}}"
+    patterns: "*.j2.sql"
+    recurse: yes
+  register: templated_files_to_delete
+
+- name: delete locally templated sql scripts
+  file:
+    state: absent
+    path: "{{item}}"
+  with_items: "{{templated_files_to_delete['files']|map(attribute='path')|sort}}"
+  delegate_to: localhost
+  run_once: True

@@ -8,19 +8,18 @@ requirements: |
 
     * postgresql requires [psycopg2](http://initd.org/psycopg/)
     * impala requires [impyla](https://github.com/cloudera/impyla)
+    * phoenix requires the [phoenixdb ](http://python-phoenixdb.readthedocs.io/en/latest/)
 
 description: |
   There are two ways you can use this role.
 
   **The filepath mode or fileglob mode**
 
-  In this mode, your iterate over a fileglob pattern you pass as argument to
-  the role. See [ansible documentation](http://docs.ansible.com/ansible/playbooks_loops.html#id4)
-  for more information on fileglob pattern.
+  In this mode, your iterate over all recursively registered SQL scripts under
+  a given directory.
 
-    * Your fileglob must match only `.sql` files or role will fail.
-    * Your fileglob must target a single sql engine per role invocation.
-    * Cororally of second point above, you mus
+    * All SQL scripts under directory will be run against the same `sql_engine`
+    * All scripts will be run in alphabetical order
 
   **The declarative mode or advanced mode**
 
@@ -55,10 +54,10 @@ description: |
   ```yaml
   # putting the user/team at the second level level allows to naturally pass
   # the role a data structure with everything needed to access the different
-  # engines for a complex maintenance activity when inpersonating a specific
+  # engines for a complex maintenance activity when impersonating a specific
   # a specific individual/group. It also allows to have even less levels.
 
-  # 3 levels example, you
+  # 3 levels example
   app_sql_conn_creds:
     # per user/team then engine creds
     me:
@@ -121,7 +120,7 @@ description: |
         sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
         sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
         sql_db: 'mydb',
-        sql_fileglob: "{{playbook_dir}}/scripts/postgres_query_test/*"
+        sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
         }
   ```
 
@@ -199,7 +198,5 @@ description: |
     ```
 
 todos:
-  - add hbase support
-  - add phoenix support
-  - impala templating support
   - test ansible timeout behavior when logging long query
+  - add jinja templating support for file queries in sql_advanced_mode?

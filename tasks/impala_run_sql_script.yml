@@ -1,0 +1,31 @@
+---
+
+# Run sql queries on impala database an database and optionaly
+# register results for later use. This is the main entry point to the
+# impala_query module used by this role
+
+# Requirements:
+#   - impyla
+
+- name: run impala query from fileglob
+  impala_query:
+    # creds
+    login_user: "{{sql_conn_creds['user']}}"
+    login_password: "{{sql_conn_creds['password']}}"
+    # target
+    login_host: "{{sql_conn_targets['host']|default(omit)}}"
+    login_unix_socket: "{{sql_conn_targets['unix_socket']|default(omit)}}"
+    ssl_mode: "{{sql_conn_targets['ssl_mode']|default(omit)}}"
+    ssl_rootcert: "{{sql_conn_targets['ssl_rootcert']|default(omit)}}"
+    # query
+    db: "{{sql_db}}"
+    query: "{{item}}"
+  delegate_to: localhost
+  run_once: True
+
+# log job
+- name: log query result to sql '{{sql_history_logfile}}'
+  lineinfile:
+    create: yes
+    line: "{{item}}"
+    dest: "{{sql_history_logfile}}"

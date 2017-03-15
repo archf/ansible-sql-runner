@@ -15,6 +15,8 @@ and their requirements.
 
   * postgresql requires [psycopg2](http://initd.org/psycopg/)
   * impala requires [impyla](https://github.com/cloudera/impyla)
+  * phoenix requires the [phoenixdb ](http://python-phoenixdb.readthedocs.io/en/latest/)
+
 
 ## Description
 
@@ -22,13 +24,11 @@ There are two ways you can use this role.
 
 **The filepath mode or fileglob mode**
 
-In this mode, your iterate over a fileglob pattern you pass as argument to
-the role. See [ansible documentation](http://docs.ansible.com/ansible/playbooks_loops.html#id4)
-for more information on fileglob pattern.
+In this mode, your iterate over all recursively registered SQL scripts under
+a given directory.
 
-  * Your fileglob must match only `.sql` files or role will fail.
-  * Your fileglob must target a single sql engine per role invocation.
-  * Cororally of second point above, you mus
+  * All SQL scripts under directory will be run against the same `sql_engine`
+  * All scripts will be run in alphabetical order
 
 **The declarative mode or advanced mode**
 
@@ -63,10 +63,10 @@ Given those defined variables.
 ```yaml
 # putting the user/team at the second level level allows to naturally pass
 # the role a data structure with everything needed to access the different
-# engines for a complex maintenance activity when inpersonating a specific
+# engines for a complex maintenance activity when impersonating a specific
 # a specific individual/group. It also allows to have even less levels.
 
-# 3 level example
+# 3 levels example
 app_sql_conn_creds:
   # per user/team then engine creds
   me:
@@ -79,7 +79,7 @@ app_sql_conn_creds:
       user: teamname
       password: "teampassword"
 
-# 2 level example
+# 2 levels example
 app_sql_conn_creds:
     postgres:
       user: myuser
@@ -97,6 +97,7 @@ app_sql_conn_targets:
     ssl_mode: <optional value, defaults to 'prefer' for postgresql modules>
     ssl_rootcert: <optional value>
     unix_socket: <optional value>
+    engine: postgres
 
   impala:
     host: <hostname or ip>
@@ -110,15 +111,11 @@ app_sql_conn_targets:
 #       purpose in mind.
 #   3. Has to be passed directly when using the fileglob mode
 sql_db: dbname
-
-# `sql_engine` is not tied to the target because:
-# 1. A target may host multiple databases (in dev environnements)
-# 2. Different team might need to interact with different db
 ```
 
 Input data structures depends of the way you use the role. In any cases either
-you let it reach for ansible globally defined variables or you pass then
-explicitly feeding it what it expects.
+you let it reach for ansible globally defined variables or you pass it
+explicitly what it expects.
 
 **Fileglob mode example**
 
@@ -131,9 +128,8 @@ much more specific.
   - { role: sql-runner,
       sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
       sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
-      sql_engine: postgres,
       sql_db: 'mydb',
-      sql_fileglob: "{{playbook_dir}}/scripts/postgres_query_test/*"
+      sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
       }
 ```
 
@@ -143,7 +139,7 @@ much more specific.
   - hosts: localhost
 
   - { role: sql-runner,
-      sql_conn_targets: "{{app_sql_conn_target}}",
+      sql_conn_targets: "{{app_sql_conn_targets}}",
       sql_conn_creds: "{{app_sql_conn_creds['me']}}",
       sql_queries: "{{app_sql_advanced_tasks}"
       }
@@ -210,6 +206,7 @@ app_sql_advanced_tasks:
           - query: a second query
   ```
 
+
 ## Role Variables
 
 ### Variables conditionally loaded
@@ -237,6 +234,7 @@ sql_history_logfile: "{{playbook_dir}}/tmp/sql_history.log"
 
 ```
 
+
 ## Installation
 
 ### Install with Ansible Galaxy
@@ -261,7 +259,7 @@ If you do not want a global installation, clone it into your `roles_path`.
 git clone git@github.com:archf/ansible-sql-runner.git /path/to/roles_path
 ```
 
-But I often add it as a submodule in a given `playbook_dir` repository.
+But I often add it as a submdule in a given `playbook_dir` repository.
 
 ```shell
 git submodule add git@github.com:archf/ansible-sql-runner.git <playbook_dir>/roles/sql-runner
@@ -284,10 +282,8 @@ None.
 
 ## Todo
 
-  * add hbase support
-  * add phoenix support
-  * impala templating support
   * test ansible timeout behavior when logging long query
+  * add jinja templating support for file queries in sql_advanced_mode?
 
 ## License
 
@@ -296,3 +292,18 @@ MIT.
 ## Author Information
 
 Felix Archambault.
+
+---
+This README was generated using ansidoc. This tool is available on pypi!
+
+```shell
+pip3 install ansidoc
+
+# validate by running a dry-run (will output result to stdout)
+ansidoc --dry-run <rolepath>
+
+# generate you role readme file
+ansidoc <rolepath>
+```
+
+You can even use it programatically from sphinx. Check it out.
