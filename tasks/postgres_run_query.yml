@@ -4,13 +4,8 @@
 # use.
 #
 # This is included by:
-#   - postgresql_var_query
-#   - postgresql_adm_query
-
-# todo: move this elsewhere
-- name: Install psycop2
-  pip:
-    name: psycopg2
+#   - postgresql_var_query.yml
+#   - postgresql_adm_query.yml
 
 - name: run postgres query | "{{query[1]['query']}}"
   postgresql_query:
