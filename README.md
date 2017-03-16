@@ -17,7 +17,6 @@ and their requirements.
   * impala requires [impyla](https://github.com/cloudera/impyla)
   * phoenix requires the [phoenixdb ](http://python-phoenixdb.readthedocs.io/en/latest/)
 
-
 ## Description
 
 There are two ways you can use this role.
@@ -103,6 +102,7 @@ app_sql_conn_targets:
     host: <hostname or ip>
     user: <impala user>
     db: dbname
+    engine: impala
 
 # `sql_db` is a loose variable and is no tied to the engine because
 #   1. A target might have multiple databases.
@@ -206,7 +206,6 @@ app_sql_advanced_tasks:
           - query: a second query
   ```
 
-
 ## Role Variables
 
 ### Variables conditionally loaded
@@ -234,48 +233,6 @@ sql_history_logfile: "{{playbook_dir}}/tmp/sql_history.log"
 
 ```
 
-
-## Installation
-
-### Install with Ansible Galaxy
-
-```shell
-ansible-galaxy install archf.sql-runner
-```
-
-Basic usage is:
-
-```yaml
-- hosts: all
-  roles:
-    - role: archf.sql-runner
-```
-
-### Install with git
-
-If you do not want a global installation, clone it into your `roles_path`.
-
-```shell
-git clone git@github.com:archf/ansible-sql-runner.git /path/to/roles_path
-```
-
-But I often add it as a submdule in a given `playbook_dir` repository.
-
-```shell
-git submodule add git@github.com:archf/ansible-sql-runner.git <playbook_dir>/roles/sql-runner
-```
-
-As the role is not managed by Ansible Galaxy, you do not have to specify the
-github user account.
-
-Basic usage is:
-
-```yaml
-- hosts: all
-  roles:
-  - role: sql-runner
-```
-
 ## Ansible role dependencies
 
 None.
@@ -284,6 +241,7 @@ None.
 
   * test ansible timeout behavior when logging long query
   * add jinja templating support for file queries in sql_advanced_mode?
+  * better tests documents check mode usage
 
 ## License
 
@@ -292,18 +250,3 @@ MIT.
 ## Author Information
 
 Felix Archambault.
-
----
-This README was generated using ansidoc. This tool is available on pypi!
-
-```shell
-pip3 install ansidoc
-
-# validate by running a dry-run (will output result to stdout)
-ansidoc --dry-run <rolepath>
-
-# generate you role readme file
-ansidoc <rolepath>
-```
-
-You can even use it programatically from sphinx. Check it out.

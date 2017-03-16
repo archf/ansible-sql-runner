@@ -94,6 +94,7 @@ description: |
       host: <hostname or ip>
       user: <impala user>
       db: dbname
+      engine: impala
 
   # `sql_db` is a loose variable and is no tied to the engine because
   #   1. A target might have multiple databases.
@@ -200,3 +201,4 @@ description: |
 todos:
   - test ansible timeout behavior when logging long query
   - add jinja templating support for file queries in sql_advanced_mode?
+  - better tests documents check mode usage
