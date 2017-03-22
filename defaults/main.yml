@@ -1,9 +1,10 @@
 ---
 
 # Disable role debugging by default.
-db_upgrader_debug: True
+sql_runner_debug: False
 
-# Empty fact list that will be populated with results for later use as
+# Empty fact dictionary to store query results for later use You can
+# pre-populate it you want. This will be passed to sql query modules as
 # named_args.
 sql_facts: {}
 
@@ -13,3 +14,16 @@ sql_facts: {}
 # - An SQL query
 # - the full path of an sql scripts
 sql_history_logfile: "{{playbook_dir}}/tmp/sql_history.log"
+
+# Disable the autocommit behavior by default. Set this to true for instance if
+# you happen to run a query that creates a database in postgres else psycopg2
+# execution will fail. It is recommended however that you use the module
+# postgresql_db module.  Running in check_mode with this will indeed execute
+# all queries.
+sql_autocommit: False
+
+# This allows to fallback on a globally defined db name that exists on different
+# sql_engine//targets when running in advanced mode. This is MUTUALLY EXCLUSIVE
+# with sql_autocommit IF you create databases in advanced mode. Your play may
+# fail. You have been warned.
+sql_db: omit

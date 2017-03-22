@@ -17,6 +17,7 @@ and their requirements.
   * impala requires [impyla](https://github.com/cloudera/impyla)
   * phoenix requires the [phoenixdb ](http://python-phoenixdb.readthedocs.io/en/latest/)
 
+
 ## Description
 
 There are two ways you can use this role.
@@ -57,7 +58,7 @@ be fetched from a dictionary that must be structure on a per `sql_engine` basis.
 
 ### Playbook examples
 
-Given those defined variables.
+Given those variables commonly defined no mather the way you use this role.
 
 ```yaml
 # putting the user/team at the second level level allows to naturally pass
@@ -110,12 +111,15 @@ app_sql_conn_targets:
 #       makes it easier to be consistent with other role coded with that
 #       purpose in mind.
 #   3. Has to be passed directly when using the fileglob mode
+#   4. It is defined has 'omit' in the default vars.
 sql_db: dbname
 ```
 
-Input data structures depends of the way you use the role. In any cases either
-you let it reach for ansible globally defined variables or you pass it
-explicitly what it expects.
+See also overridables variables defined in the [Default vars](#Default-vars)
+
+Exact input data structures depends of the way you use the role. In any cases
+either you let it reach for ansible globally defined variables or you pass it
+explicitly what it expects. Refer to examples below for example usage.
 
 **Fileglob mode example**
 
@@ -141,25 +145,25 @@ much more specific.
   - { role: sql-runner,
       sql_conn_targets: "{{app_sql_conn_targets}}",
       sql_conn_creds: "{{app_sql_conn_creds['me']}}",
-      sql_queries: "{{app_sql_advanced_tasks}"
+      sql_queries: "{{app_sql_advanced_tasks}}"
       }
 ```
 
-Where `my_sql_advanced_tasks` is defined as below. See inlined explanations.
+Where `app_sql_advanced_tasks` is defined as below. See inlined explanations.
 
 ```yaml
 app_sql_advanced_tasks:
 
     # Fist loop that optionaly gather facts that can be used to alter later
     # scripts that contains named placeholder. Those should be mainly 'read'
-    # queries that do not alter the database state.
+    # queries that do not alter the database schema.
     sql_var_queries:
 
         # engine will default the the one in sql_conn_target if unspecified.
         # In that case
       - engine: postgres
         db: mydb
-        # List of queries to run
+        # List of queries to run against a given db//engine.
         queries:
           - name: my_var
             query: "SELECT this_var FROM that_table limit %s"
@@ -174,9 +178,10 @@ app_sql_advanced_tasks:
               nb_results: 6
 
       - engine: impala
+        db: myimpaladb
         queries:
         - name: impala_var
-          query: <sql query to gather to assign impala_var value>
+          query: <sql query where result will be assigned to impala_var key>
 
       # This will populate a `sql_facts` dict globally available for the rest of the
       # ansible runtime. You can pass that dict as a named_args to `postgresql_query`
@@ -191,20 +196,33 @@ app_sql_advanced_tasks:
       #   }
       # ```
 
-    # List of queries that each contains a list of script to execute against an
-    # sql engine perform. If scripts suffix is .sql.j2, it will be templated
-    # locally first. All scripts are run in the defined order.
-    # adm is a memotechnic shorthand for (admin|administration|maintenance) queries
+    # adm is a memotechnic shorthand for (admin|administration) queries
     sql_adm_queries:
       - engine: postgres
+        db: mydb
+        # List of queries that each contains a list of script to execute against an
+        # sql engine perform. If scripts suffix is .sql.j2, it will be templated
+        # locally first. All scripts are run in the defined order.
         queries:
           - query: "{{playbook_dir}}/scripts/postgres/test_postgres_query_use_facts.sql"
             named_args: "{{sql_facts}}"
 
-      - engine: impala
+      - engine: postgres
+        # enable autocommit to allow database creation. Alternatively, enable
+        # this globally but keep in mind your queries will be run even
+        # in check_mode.
+        autocommit: True
+        # List of queries to run
         queries:
-          - query: a second query
+            query: "create database myotherdb"
+            query: "create database mythirddb"
+
+      - engine: impala
+        db: myimpaladb
+        queries:
+          - query: a impala query
   ```
+
 
 ## Role Variables
 
@@ -218,9 +236,10 @@ Defaults from `defaults/main.yml`.
 
 ```yaml
 # Disable role debugging by default.
-db_upgrader_debug: True
+sql_runner_debug: False
 
-# Empty fact list that will be populated with results for later use as
+# Empty fact dictionary to store query results for later use You can
+# pre-populate it you want. This will be passed to sql query modules as
 # named_args.
 sql_facts: {}
 
@@ -231,6 +250,61 @@ sql_facts: {}
 # - the full path of an sql scripts
 sql_history_logfile: "{{playbook_dir}}/tmp/sql_history.log"
 
+# Disable the autocommit behavior by default. Set this to true for instance if
+# you happen to run a query that creates a database in postgres else psycopg2
+# execution will fail. It is recommended however that you use the module
+# postgresql_db module.  Running in check_mode with this will indeed execute
+# all queries.
+sql_autocommit: False
+
+# This allows to fallback on a globally defined db name that exists on different
+# sql_engine//targets when running in advanced mode. This is MUTUALLY EXCLUSIVE
+# with sql_autocommit IF you create databases in advanced mode. Your play may
+# fail. You have been warned.
+sql_db: omit
+
+```
+
+
+## Installation
+
+### Install with Ansible Galaxy
+
+```shell
+ansible-galaxy install archf.sql-runner
+```
+
+Basic usage is:
+
+```yaml
+- hosts: all
+  roles:
+    - role: archf.sql-runner
+```
+
+### Install with git
+
+If you do not want a global installation, clone it into your `roles_path`.
+
+```shell
+git clone git@github.com:archf/ansible-sql-runner.git /path/to/roles_path
+```
+
+But I often add it as a submdule in a given `playbook_dir` repository.
+
+```shell
+git submodule add git@github.com:archf/ansible-sql-runner.git <playbook_dir>/roles/sql-runner
+```
+
+As the role is not managed by Ansible Galaxy, you do not have to specify the
+github user account.
+
+Basic usage is:
+
+```yaml
+- hosts: all
+  roles:
+  - role: sql-runner
 ```
 
 ## Ansible role dependencies
@@ -241,7 +315,7 @@ None.
 
   * test ansible timeout behavior when logging long query
   * add jinja templating support for file queries in sql_advanced_mode?
-  * better tests documents check mode usage
+  * better tests and document check mode usage
 
 ## License
 
@@ -250,3 +324,18 @@ MIT.
 ## Author Information
 
 Felix Archambault.
+
+---
+This README was generated using ansidoc. This tool is available on pypi!
+
+```shell
+pip3 install ansidoc
+
+# validate by running a dry-run (will output result to stdout)
+ansidoc --dry-run <rolepath>
+
+# generate you role readme file
+ansidoc <rolepath>
+```
+
+You can even use it programatically from sphinx. Check it out.

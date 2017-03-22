@@ -49,7 +49,7 @@ description: |
 
   ### Playbook examples
 
-  Given those defined variables.
+  Given those variables commonly defined no mather the way you use this role.
 
   ```yaml
   # putting the user/team at the second level level allows to naturally pass
@@ -102,12 +102,15 @@ description: |
   #       makes it easier to be consistent with other role coded with that
   #       purpose in mind.
   #   3. Has to be passed directly when using the fileglob mode
+  #   4. It is defined has 'omit' in the default vars.
   sql_db: dbname
   ```
 
-  Input data structures depends of the way you use the role. In any cases either
-  you let it reach for ansible globally defined variables or you pass it
-  explicitly what it expects.
+  See also overridables variables defined in the [Default vars](#Default-vars)
+
+  Exact input data structures depends of the way you use the role. In any cases
+  either you let it reach for ansible globally defined variables or you pass it
+  explicitly what it expects. Refer to examples below for example usage.
 
   **Fileglob mode example**
 
@@ -133,25 +136,25 @@ description: |
     - { role: sql-runner,
         sql_conn_targets: "{{app_sql_conn_targets}}",
         sql_conn_creds: "{{app_sql_conn_creds['me']}}",
-        sql_queries: "{{app_sql_advanced_tasks}"
+        sql_queries: "{{app_sql_advanced_tasks}}"
         }
   ```
 
-  Where `my_sql_advanced_tasks` is defined as below. See inlined explanations.
+  Where `app_sql_advanced_tasks` is defined as below. See inlined explanations.
 
   ```yaml
   app_sql_advanced_tasks:
 
       # Fist loop that optionaly gather facts that can be used to alter later
       # scripts that contains named placeholder. Those should be mainly 'read'
-      # queries that do not alter the database state.
+      # queries that do not alter the database schema.
       sql_var_queries:
 
           # engine will default the the one in sql_conn_target if unspecified.
           # In that case
         - engine: postgres
           db: mydb
-          # List of queries to run
+          # List of queries to run against a given db//engine.
           queries:
             - name: my_var
               query: "SELECT this_var FROM that_table limit %s"
@@ -166,9 +169,10 @@ description: |
                 nb_results: 6
 
         - engine: impala
+          db: myimpaladb
           queries:
           - name: impala_var
-            query: <sql query to gather to assign impala_var value>
+            query: <sql query where result will be assigned to impala_var key>
 
         # This will populate a `sql_facts` dict globally available for the rest of the
         # ansible runtime. You can pass that dict as a named_args to `postgresql_query`
@@ -183,22 +187,34 @@ description: |
         #   }
         # ```
 
-      # List of queries that each contains a list of script to execute against an
-      # sql engine perform. If scripts suffix is .sql.j2, it will be templated
-      # locally first. All scripts are run in the defined order.
-      # adm is a memotechnic shorthand for (admin|administration|maintenance) queries
+      # adm is a memotechnic shorthand for (admin|administration) queries
       sql_adm_queries:
         - engine: postgres
+          db: mydb
+          # List of queries that each contains a list of script to execute against an
+          # sql engine perform. If scripts suffix is .sql.j2, it will be templated
+          # locally first. All scripts are run in the defined order.
           queries:
             - query: "{{playbook_dir}}/scripts/postgres/test_postgres_query_use_facts.sql"
               named_args: "{{sql_facts}}"
 
-        - engine: impala
+        - engine: postgres
+          # enable autocommit to allow database creation. Alternatively, enable
+          # this globally but keep in mind your queries will be run even
+          # in check_mode.
+          autocommit: True
+          # List of queries to run
           queries:
-            - query: a second query
+              query: "create database myotherdb"
+              query: "create database mythirddb"
+
+        - engine: impala
+          db: myimpaladb
+          queries:
+            - query: a impala query
     ```
 
 todos:
   - test ansible timeout behavior when logging long query
   - add jinja templating support for file queries in sql_advanced_mode?
-  - better tests documents check mode usage
+  - better tests and document check mode usage

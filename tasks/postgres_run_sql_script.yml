@@ -18,7 +18,7 @@
     # query
     db: "{{sql_db}}"
     query: "{{item}}"
-    autocommit: "{{sql_conn_targets['autocommit']|default(omit)}}"
+    autocommit: "{{sql_autocommit}}"
   delegate_to: localhost
   run_once: True
 

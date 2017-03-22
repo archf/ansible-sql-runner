@@ -18,11 +18,11 @@
     ssl_mode: "{{sql_conn_targets['postgres']['ssl_mode']|default(omit)}}"
     ssl_rootcert: "{{sql_conn_targets['postgres']['ssl_rootcert']|default(omit)}}"
     # query
-    db: "{{query[1]['db']|default(query[0]['db'])}}"
+    db: "{{query[0]['db']|default(sql_db)}}"
     query: "{{query[1]['query']}}"
     positional_args: "{{query[1]['positional_args']|default(omit)}}"
     named_args: "{{query[1]['named_args']|default(omit)}}"
-    autocommit: "{{sql_conn_targets['autocommit']|default(omit)}}"
+    autocommit: "{{query[0]['autocommit']|default(sql_autocommit)}}"
 
     # optionaly optionaly turn result into a fact//variable
     fact: "{{query['fact']|default(omit)}}"
