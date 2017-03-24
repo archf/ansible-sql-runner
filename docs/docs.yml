@@ -1,4 +1,3 @@
-
 ---
 
 github_account: archf
@@ -120,24 +119,30 @@ description: |
   ```yaml
     - hosts: localhost
 
-    - { role: sql-runner,
-        sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
-        sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
-        sql_db: 'mydb',
-        sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
-        }
-  ```
+      vars:
+        # change the path to some place of your choosing.
+        sql_history_logfile: <path to the sql_history_logfile>
+
+      roles:
+        - { role: sql-runner,
+            sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
+            sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
+            sql_db: 'mydb',
+            sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
+            }
+    ```
 
   **Advanced mode example**
 
     ```yaml
     - hosts: localhost
 
-    - { role: sql-runner,
-        sql_conn_targets: "{{app_sql_conn_targets}}",
-        sql_conn_creds: "{{app_sql_conn_creds['me']}}",
-        sql_queries: "{{app_sql_advanced_tasks}}"
-        }
+      roles:
+        - { role: sql-runner,
+            sql_conn_targets: "{{app_sql_conn_targets}}",
+            sql_conn_creds: "{{app_sql_conn_creds['me']}}",
+            sql_queries: "{{app_sql_advanced_tasks}}"
+            }
   ```
 
   Where `app_sql_advanced_tasks` is defined as below. See inlined explanations.

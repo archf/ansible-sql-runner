@@ -3,7 +3,11 @@
 # Run sql script phoenix
 
 # Requirements:
-  #- /usr/lib/phoenix/bin/sqlline.py present on the system
+# - /usr/lib/phoenix/bin/sqlline.py present on the system
+
+# Alternatively, this could have been done using
+# https://pypi.python.org/pypi/phoenixdb/0.6 if you have a phoenixdb server
+# but I had none at this moment.
 
 - name: run phoenix query from fileglob
   shell: "/usr/lib/phoenix/bin/sqlline.py {{sql_conn_targets['host']}}:{{sql_conn_targets['port']}} {{item}}"

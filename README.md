@@ -17,7 +17,6 @@ and their requirements.
   * impala requires [impyla](https://github.com/cloudera/impyla)
   * phoenix requires the [phoenixdb ](http://python-phoenixdb.readthedocs.io/en/latest/)
 
-
 ## Description
 
 There are two ways you can use this role.
@@ -129,24 +128,30 @@ much more specific.
 ```yaml
   - hosts: localhost
 
-  - { role: sql-runner,
-      sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
-      sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
-      sql_db: 'mydb',
-      sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
-      }
-```
+    vars:
+      # change the path to some place of your choosing.
+      sql_history_logfile: <path to the sql_history_logfile>
+
+    roles:
+      - { role: sql-runner,
+          sql_conn_targets: "{{app_sql_conn_targets['postgres']}}",
+          sql_conn_creds: "{{app_sql_conn_creds['me']['postgres']}}",
+          sql_db: 'mydb',
+          sql_scripts_dir: "{{playbook_dir}}/scripts/postgres_query_test/*"
+          }
+  ```
 
 **Advanced mode example**
 
   ```yaml
   - hosts: localhost
 
-  - { role: sql-runner,
-      sql_conn_targets: "{{app_sql_conn_targets}}",
-      sql_conn_creds: "{{app_sql_conn_creds['me']}}",
-      sql_queries: "{{app_sql_advanced_tasks}}"
-      }
+    roles:
+      - { role: sql-runner,
+          sql_conn_targets: "{{app_sql_conn_targets}}",
+          sql_conn_creds: "{{app_sql_conn_creds['me']}}",
+          sql_queries: "{{app_sql_advanced_tasks}}"
+          }
 ```
 
 Where `app_sql_advanced_tasks` is defined as below. See inlined explanations.
@@ -223,7 +228,6 @@ app_sql_advanced_tasks:
           - query: a impala query
   ```
 
-
 ## Role Variables
 
 ### Variables conditionally loaded
@@ -265,52 +269,6 @@ sql_db: omit
 
 ```
 
-
-## Installation
-
-### Install with Ansible Galaxy
-
-```shell
-ansible-galaxy install archf.sql-runner
-```
-
-Basic usage is:
-
-```yaml
-- hosts: all
-  roles:
-    - role: archf.sql-runner
-```
-
-### Install with git
-
-If you do not want a global installation, clone it into your `roles_path`.
-
-```shell
-git clone git@github.com:archf/ansible-sql-runner.git /path/to/roles_path
-```
-
-But I often add it as a submdule in a given `playbook_dir` repository.
-
-```shell
-git submodule add git@github.com:archf/ansible-sql-runner.git <playbook_dir>/roles/sql-runner
-```
-
-As the role is not managed by Ansible Galaxy, you do not have to specify the
-github user account.
-
-Basic usage is:
-
-```yaml
-- hosts: all
-  roles:
-  - role: sql-runner
-```
-
-## Ansible role dependencies
-
-None.
-
 ## Todo
 
   * test ansible timeout behavior when logging long query
@@ -324,18 +282,3 @@ MIT.
 ## Author Information
 
 Felix Archambault.
-
----
-This README was generated using ansidoc. This tool is available on pypi!
-
-```shell
-pip3 install ansidoc
-
-# validate by running a dry-run (will output result to stdout)
-ansidoc --dry-run <rolepath>
-
-# generate you role readme file
-ansidoc <rolepath>
-```
-
-You can even use it programatically from sphinx. Check it out.
