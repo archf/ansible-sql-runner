@@ -43,7 +43,7 @@ options:
     description:
       - User (role) used to authenticate with Impala
     required: false
-    default: postgres
+    default: impala
   login_password:
     description:
       - Password used to authenticate with Impala
@@ -66,8 +66,6 @@ options:
       Append the query_results to this key value, making this new variable
       available to subsequent plays during an ansible-playbook run.
 notes:
-   - The default authentication assumes that you are either logging in as or
-     sudo'ing to the postgres account on the host.
    - This module uses impyla, a Python impala database adapter. You must
      ensure that impyla is installed on the host before using this module. If
      the remote host is the impala server (which is the default case), then
@@ -98,7 +96,6 @@ EXAMPLES = '''
     named_args:
       a_value: "positional string value 1"
       b_value: "positional string value 2"
-
 
 # Run queries from a '.sql' file
 - impala_query:
@@ -151,26 +148,6 @@ else:
 
 import traceback
 
-class Impala():
-    @staticmethod
-    def ensure_libs(sslrootcert=None):
-        if not HAS_IMPYLA:
-            raise LibraryError('impyla is not installed. we need impyla.')
-
-        # no problems
-        return None
-
-    @staticmethod
-    def impala_common_argument_spec():
-        return dict(
-            login_user        = dict(default='impala'),
-            login_password    = dict(default='', no_log=True),
-            login_host        = dict(default=''),
-            login_unix_socket = dict(default=''),
-            port              = dict(type='int', default=21050)
-        )
-impalautils = Impala()
-
 from ansible.module_utils.six import iteritems
 from ansible.errors import AnsibleError
 
@@ -182,19 +159,20 @@ from ansible.errors import AnsibleError
 
 def main():
 
-    argument_spec = impalautils.impala_common_argument_spec()
-
-    argument_spec.update(dict(
-        db=dict(default=None),
-        query=dict(type="str"),
-        positional_args=dict(type="list"),
-        named_args=dict(type="dict"),
-        fact=dict(default=None),
-    ))
-
     module = AnsibleModule(
-        argument_spec=argument_spec,
-        supports_check_mode=True,
+        argument_spec=dict(
+            login_user=dict(default='impala'),
+            login_password=dict(default=None, no_log=True),
+            login_host=dict(default=''),
+            login_unix_socket=dict(default=''),
+            port=dict(type='int', default=21050),
+            db=dict(default=None),
+            query=dict(type="str"),
+            positional_args=dict(type="list"),
+            named_args=dict(type="dict"),
+            fact=dict(default=None)
+        ),
+        supports_check_mode=False,
         mutually_exclusive=[
             ["positional_args", "named_args"]
         ],
