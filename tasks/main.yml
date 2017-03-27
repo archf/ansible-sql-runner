@@ -16,8 +16,10 @@
 
 # iterate over a previously explicitely defined list of queries or sql scripts
 - include: sql_advanced_mode.yml
+  static: no
   when: sql_queries is defined and sql_scripts_dir is not defined
 
 # If role was given a sql_path argument, iterate over all files under that path.
 - include: sql_fileglob_mode.yml
+  static: no
   when: sql_scripts_dir is defined

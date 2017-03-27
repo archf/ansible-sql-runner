@@ -9,7 +9,7 @@
   impala_query:
     # creds
     login_user: "{{sql_conn_creds['user']}}"
-    login_password: "{{sql_conn_creds['password']}}"
+    login_password: "{{sql_conn_creds['password']|default(omit)}}"
     # target
     login_host: "{{sql_conn_targets['host']|default(omit)}}"
     login_unix_socket: "{{sql_conn_targets['unix_socket']|default(omit)}}"
