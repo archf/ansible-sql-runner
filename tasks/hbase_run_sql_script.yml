@@ -1,0 +1,11 @@
+---
+
+# Run sql script with hbase shell
+
+# Requirements:
+# - hbase shell present on the system
+
+- name: run hbase script: from fileglob
+  shell: '<{{item}} | /usr/bin/hbase shell -n'
+
+- include: log_query_to_sql_hist.yml
