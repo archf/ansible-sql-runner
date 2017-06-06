@@ -1,3 +1,4 @@
 tests/scripts/test.yml
 tests/tmp/*
+tests/test.retry
 *.ropeproject
