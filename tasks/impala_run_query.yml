@@ -22,5 +22,3 @@
 
     # optionaly optionaly turn result into a fact//variable
     fact: "{{query['fact']|default(omit)}}"
-  delegate_to: localhost
-  run_once: True

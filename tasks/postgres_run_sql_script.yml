@@ -19,7 +19,5 @@
     db: "{{sql_db}}"
     query: "{{item}}"
     autocommit: "{{sql_autocommit}}"
-  delegate_to: localhost
-  run_once: True
 
 - include: log_query_to_sql_hist.yml

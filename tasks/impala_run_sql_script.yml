@@ -18,7 +18,6 @@
     # query
     db: "{{sql_db}}"
     query: "{{item}}"
-  delegate_to: localhost
-  run_once: True
+    query_log: "{{sql_history_logfile|dirname}}/impala_queries.log"
 
 - include: log_query_to_sql_hist.yml

@@ -5,7 +5,7 @@
 # Requirements:
 # - hbase shell present on the system
 
-- name: run hbase script: from fileglob
-  shell: '<{{item}} | /usr/bin/hbase shell -n'
+- name: run hbase script from fileglob
+  shell: '/usr/bin/hbase shell -n < {{item}}'
 
 - include: log_query_to_sql_hist.yml

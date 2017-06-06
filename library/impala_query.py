@@ -147,6 +147,7 @@ else:
     HAS_IMPYLA = True
 
 import traceback
+import re
 
 from ansible.module_utils.six import iteritems
 from ansible.errors import AnsibleError
@@ -170,7 +171,8 @@ def main():
             query=dict(type="str"),
             positional_args=dict(type="list"),
             named_args=dict(type="dict"),
-            fact=dict(default=None)
+            fact=dict(default=None),
+            query_log=dict(type="str")
         ),
         supports_check_mode=False,
         mutually_exclusive=[
@@ -208,28 +210,53 @@ def main():
 
     # if query is a file, load the file and run it
     query = module.params["query"]
+
     if query.endswith('.sql'):
         try:
-            query = open(query, 'r').read().strip('\n')
+            with open(query, 'r') as fh:
+                sql_file = fh.read().strip('\n')
         except Exception:
             e = get_exception()
             module.fail_json(msg="Unable to find '%s' in given path: %s" % (query, e))
 
-    arguments = None
-
-    # prepare args
-    if module.params["positional_args"] is not None:
-        arguments = module.params["positional_args"]
-
-    elif module.params["named_args"] is not None:
-        arguments = module.params["named_args"]
+    if not module.params['query_log']:
+        module.fail_json(msg="No impala query log file path provided, can't continue the run")
 
     try:
-        cursor.execute(query, arguments)
+        query_log = open(module.params['query_log'], 'a+')
+        query_log.seek(0)
     except Exception:
         e = get_exception()
-        module.fail_json(msg="Unable to execute query '%s': %s" % (query, e),
-                         query_arguments=arguments)
+        module.fail_json(msg="Unable to find '%s' in given path: %s" % (module.params['query_log'], e))
+
+    arguments = None
+
+    # checks that the string is not empty, and that we split only at the end of lines
+    compiled_regex = re.compile(r';\s+')
+    queries = [line for line in compiled_regex.sub(';\n', sql_file).split(';\n') if line] if sql_file else [query]
+
+    # read through all the already ran queries in the query log
+    already_ran_queries = [line for line in query_log.read().strip('\n').split(';\n') if line]
+
+    for query in queries:
+        if query not in already_ran_queries:
+            # prepare args
+            if module.params["positional_args"] is not None:
+                arguments = module.params["positional_args"]
+
+            elif module.params["named_args"] is not None:
+                arguments = module.params["named_args"]
+
+            try:
+                cursor.execute(query, arguments)
+                query_log.write(query + '\n')
+            except Exception:
+                e = get_exception()
+                module.fail_json(msg="Unable to execute query '%s': %s" % (query, e),
+                                     query_arguments=arguments)
+
+    if query_log:
+        query_log.close()
 
     ansible_facts = {}
     query_results = []

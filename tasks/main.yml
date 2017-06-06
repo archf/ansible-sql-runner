@@ -11,8 +11,13 @@
     state: touch
 
 - name: loading sql sql_history from '{{sql_history_logfile}}'
+  slurp:
+    src: "{{sql_history_logfile}}"
+  register: sql_history
+
+- name: set fact sql_history
   set_fact:
-    sql_history: "{{lookup('file', sql_history_logfile)}}"
+    sql_history: "{{ sql_history['content'] | b64decode }}"
 
 # iterate over a previously explicitely defined list of queries or sql scripts
 - include: sql_advanced_mode.yml
