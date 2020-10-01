@@ -11,7 +11,7 @@ Minimum required ansible version is 2.2.
 ### Other considerations
 
 It depends on the SQL engine you use. Here's the list of supported SQL engines
-and their requirements.
+and their requirements, so be ready with your own or get here:-
 
   * postgresql requires [psycopg2](http://initd.org/psycopg/)
   * impala requires [impyla](https://github.com/cloudera/impyla)
@@ -23,7 +23,7 @@ There are two ways you can use this role.
 
 **The filepath mode or fileglob mode**
 
-In this mode, your iterate over all recursively registered SQL scripts under
+In this mode, you will iterate over all recursively registered SQL scripts under
 a given directory.
 
   * All SQL scripts under directory will be run against the same `sql_engine`
